@@ -1,0 +1,35 @@
+#!ipxe
+# keyboard map variable
+isset ${kbmap} || set kbmap us
+
+:menu
+# now decide between uefi and legacy boot
+iseq ${platform} efi && goto menu_uefi || goto menu_legacy
+
+:menu_uefi
+menu
+item netboot   Netboot
+item ipxeconfig iPXE config tool
+choose --default netboot --timeout 5000 target && goto ${target} || goto menu
+
+:menu_legacy
+menu
+item netboot   Netboot
+item ipxeconfig iPXE config tool
+choose --default netboot --timeout 5000 target && goto ${target} || goto menu
+
+:ipxeconfig
+config
+goto menu
+
+:netboot
+# use IPv6 address as DNS is usually not available in the initramdisk
+kernel netboot/stretch/vmlinuz initrd=initrd.img fetch=http://[2001:db8::1]/netboot/stretch/filesystem.squashfs live-media-path=/ boot=live noprompt noeject live-config.username=root BOOTIF=01-${netX/mac:hexhyp}
+initrd netboot/stretch/initrd.img
+imgstat
+boot && goto menu || goto failed
+
+:failed
+echo Last menu item boot failed. Read the screen above, we will return to menu in 10 seconds.
+sleep 10
+goto menu
